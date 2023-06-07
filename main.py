@@ -7,7 +7,6 @@ import curses_tools
 
 
 async def draw_frame(canvas, row, column, frame_1, frame_2, delay):
-
     curses_tools.draw_frame(canvas, row, column, frame_1)
     for time in delay:
         await asyncio.sleep(0)
@@ -41,6 +40,13 @@ async def blink(canvas, row, column, symbol='*', delay=[]):
 
 
 def draw_blink(canvas):
+
+    # while True:
+    #     rows_direction, columns_direction, space_pressed = curses_tools.read_controls(canvas)
+    #     print(rows_direction, columns_direction, space_pressed)
+    #     time.sleep(1/10)
+
+
     with open("rocket_frame_1.txt", "r") as my_file:
         frame_1 = my_file.read()
     with open("rocket_frame_2.txt", "r") as my_file:
@@ -49,6 +55,7 @@ def draw_blink(canvas):
     coroutines = []
     coroutine_frames = draw_frame(canvas, 2, 75, frame_1, frame_2, range(1, 10))
     symbols = '+*.:'
+    ship_row, ship_column = 2, 75
 
     for column in range(1, 5):
         for row in range(1, 5):
@@ -73,17 +80,25 @@ def draw_blink(canvas):
             try:
                 coroutine_frames.send(None)
             except StopIteration:
-                coroutine_frames = draw_frame(canvas, 2, 75, frame_1, frame_2, range(1, 50))
+                rows_direction, columns_direction, space_pressed = curses_tools.read_controls(canvas)
+                ship_row += rows_direction
+                ship_row = max(ship_row, 1)
+                ship_row = min(ship_row, 5)
+                ship_column += columns_direction
+                ship_column = max(ship_column, 2)
+                ship_column = min(ship_column, 158)
+                coroutine_frames = draw_frame(canvas, ship_row, ship_column, frame_1, frame_2, range(1, 2))
             try:
                 coroutine.send(None)
                 canvas.refresh()
-                time.sleep(1/500)
+                time.sleep(1/1000)
             except StopIteration:
                 break
 
 
 def main():
-    curses.initscr()
+    window = curses.initscr()
+    window.nodelay(True)
     curses.curs_set(0)
     curses.update_lines_cols()
     curses.A_DIM
