@@ -103,7 +103,7 @@ def draw_blink(canvas):
         for coroutine in coroutines:
             try:
                 coroutine_frames.send(None)
-            except:
+            except StopIteration:
                 coroutine_frames = draw_frame(canvas, 2, 75, frame_1, frame_2, range(1, 20))
             try:
                 coroutine.send(None)
