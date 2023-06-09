@@ -8,7 +8,7 @@ import curses_tools
 
 async def draw_frame(canvas, row, column, frame_1, frame_2, delay):
     curses_tools.draw_frame(canvas, row, column, frame_1)
-    for time in delay:
+    for _ in delay:
         await asyncio.sleep(0)
     curses_tools.draw_frame(canvas, row, column, frame_1, True)
     curses_tools.draw_frame(canvas, row, column, frame_2)
@@ -18,34 +18,28 @@ async def draw_frame(canvas, row, column, frame_1, frame_2, delay):
 
 
 async def blink(canvas, row, column, symbol='*', delay=[]):
-    for time in delay:
+    for _ in delay:
         await asyncio.sleep(0)
 
     while True:
         canvas.addstr(row, column, symbol, curses.A_DIM)
-        for counter in range(1, 11):
+        for _ in range(1, 11):
             await asyncio.sleep(0)
 
         canvas.addstr(row, column, symbol)
-        for counter in range(1, 3):
+        for _ in range(1, 3):
             await asyncio.sleep(0)
 
         canvas.addstr(row, column, symbol, curses.A_BOLD)
-        for counter in range(1, 5):
+        for _ in range(1, 5):
             await asyncio.sleep(0)
 
         canvas.addstr(row, column, symbol)
-        for counter in range(1, 3):
+        for _ in range(1, 3):
             await asyncio.sleep(0)
 
 
 def draw_blink(canvas):
-
-    # while True:
-    #     rows_direction, columns_direction, space_pressed = curses_tools.read_controls(canvas)
-    #     print(rows_direction, columns_direction, space_pressed)
-    #     time.sleep(1/10)
-
 
     with open("rocket_frame_1.txt", "r") as my_file:
         frame_1 = my_file.read()
@@ -57,8 +51,8 @@ def draw_blink(canvas):
     symbols = '+*.:'
     ship_row, ship_column = 2, 75
 
-    for column in range(1, 5):
-        for row in range(1, 5):
+    for _ in range(1, 5):
+        for _ in range(1, 5):
             coroutines.append(blink(
                 canvas,
                 random.randint(1, 13),
