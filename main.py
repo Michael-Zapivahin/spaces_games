@@ -26,14 +26,12 @@ async def draw_frame(canvas, ship_row, ship_column, frame_1, frame_2):
         ship_column = max(ship_column, COLUMN_START)
         ship_column = min(ship_column, COLUMN_END)
 
-        row = ship_row
-        column = ship_column
-        curses_tools.draw_frame(canvas, row, column, frame_1)
+        curses_tools.draw_frame(canvas, ship_row, ship_column, frame_1)
         await asyncio.sleep(0)
-        curses_tools.draw_frame(canvas, row, column, frame_1, True)
-        curses_tools.draw_frame(canvas, row, column, frame_2)
+        curses_tools.draw_frame(canvas, ship_row, ship_column, frame_1, True)
+        curses_tools.draw_frame(canvas, ship_row, ship_column, frame_2)
         await asyncio.sleep(0)
-        curses_tools.draw_frame(canvas, row, column, frame_2, True)
+        curses_tools.draw_frame(canvas, ship_row, ship_column, frame_2, True)
 
 
 async def blink(canvas, row, column, symbol='*', delay=[]):
@@ -82,14 +80,13 @@ def draw_blink(canvas):
 
     canvas.border()
     while True:
+        canvas.refresh()
         for coroutine in coroutines:
             try:
                 coroutine.send(None)
-                canvas.refresh()
                 time.sleep(1 / FREQUENCY)
             except StopIteration:
                 pass
-
 
 
 def main():
