@@ -40,13 +40,14 @@ async def fire(canvas, start_row, start_column, rows_speed=-0.3, columns_speed=0
     max_row, max_column = rows - 1, columns - 1
 
     curses.beep()
-
-    while 0 < row < max_row and 0 < column < max_column:
-        canvas.addstr(round(row), round(column), symbol)
+    while True:
+        while 0 < row < max_row and 0 < column < max_column:
+            canvas.addstr(round(row), round(column), symbol)
+            await asyncio.sleep(0)
+            canvas.addstr(round(row), round(column), ' ')
+            row += rows_speed
+            column += columns_speed
         await asyncio.sleep(0)
-        canvas.addstr(round(row), round(column), ' ')
-        row += rows_speed
-        column += columns_speed
 
 
 async def draw_frame(canvas, ship_row, ship_column, frame_1, frame_2):
@@ -102,8 +103,7 @@ def draw_blink(canvas):
     coroutines.append(coroutine_frames)
     symbols = '+*.:'
 
-    # for example start the function - fire
-    #coroutines.append(fire(canvas, ROW_END, COLUMN_START, -0.1, 2))
+    coroutines.append(fire(canvas, ROW_END, COLUMN_START, -0.1, 2))
 
     for _ in range(STARS_COUNT):
         coroutines.append(blink(
@@ -120,7 +120,7 @@ def draw_blink(canvas):
         for coroutine in coroutines:
             try:
                 coroutine.send(None)
-            except StopIteration:
+            except StopIteration or KeyboardInterrupt:
                 pass
         time.sleep(1 / FREQUENCY)
 
