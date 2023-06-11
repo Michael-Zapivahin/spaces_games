@@ -6,14 +6,47 @@ import asyncio
 import curses_tools
 
 
-FREQUENCY = 10000
-FLASH_FREQUENCY = 3
+window_size = curses.initscr().getmaxyx()
+
 COLUMN_START = 1
-COLUMN_END = 160
+COLUMN_END = window_size[1]-6
 ROW_START = 1
-ROW_END = 13
-DELAY = 10
-STARS_COUNT = 100
+ROW_END = window_size[0]-2
+
+FREQUENCY = 100
+STARS_FLASH_FREQUENCY = 3
+STARS_COUNT = 50
+TIC_TIMEOUT = 10
+
+
+async def fire(canvas, start_row, start_column, rows_speed=-0.3, columns_speed=0):
+    """Display animation of gun shot, direction and speed can be specified."""
+
+    row, column = start_row, start_column
+
+    canvas.addstr(round(row), round(column), '*')
+    await asyncio.sleep(0)
+
+    canvas.addstr(round(row), round(column), 'O')
+    await asyncio.sleep(0)
+    canvas.addstr(round(row), round(column), ' ')
+
+    row += rows_speed
+    column += columns_speed
+
+    symbol = '-' if columns_speed else '|'
+
+    rows, columns = canvas.getmaxyx()
+    max_row, max_column = rows - 1, columns - 1
+
+    curses.beep()
+
+    while 0 < row < max_row and 0 < column < max_column:
+        canvas.addstr(round(row), round(column), symbol)
+        await asyncio.sleep(0)
+        canvas.addstr(round(row), round(column), ' ')
+        row += rows_speed
+        column += columns_speed
 
 
 async def draw_frame(canvas, ship_row, ship_column, frame_1, frame_2):
@@ -40,19 +73,19 @@ async def blink(canvas, row, column, symbol='*', delay=[]):
 
     while True:
         canvas.addstr(row, column, symbol, curses.A_DIM)
-        for _ in range(1, FLASH_FREQUENCY * 4):
+        for _ in range(TIC_TIMEOUT * 20):
             await asyncio.sleep(0)
 
         canvas.addstr(row, column, symbol)
-        for _ in range(1, FLASH_FREQUENCY):
+        for _ in range(TIC_TIMEOUT * 3):
             await asyncio.sleep(0)
 
         canvas.addstr(row, column, symbol, curses.A_BOLD)
-        for _ in range(1, FLASH_FREQUENCY * 2):
+        for _ in range(TIC_TIMEOUT * 5):
             await asyncio.sleep(0)
 
         canvas.addstr(row, column, symbol)
-        for _ in range(1, FLASH_FREQUENCY):
+        for _ in range(TIC_TIMEOUT * 3):
             await asyncio.sleep(0)
 
 
@@ -69,13 +102,16 @@ def draw_blink(canvas):
     coroutines.append(coroutine_frames)
     symbols = '+*.:'
 
+    # for example start the function - fire
+    #coroutines.append(fire(canvas, ROW_END, COLUMN_START, -0.1, 2))
+
     for _ in range(STARS_COUNT):
         coroutines.append(blink(
             canvas,
             random.randint(ROW_START, ROW_END),
             random.randint(COLUMN_START, COLUMN_END),
             random.choice(symbols),
-            range(random.randint(1, FLASH_FREQUENCY))
+            range(random.randint(1, STARS_FLASH_FREQUENCY))
         ))
 
     canvas.border()
@@ -84,9 +120,9 @@ def draw_blink(canvas):
         for coroutine in coroutines:
             try:
                 coroutine.send(None)
-                time.sleep(1 / FREQUENCY)
             except StopIteration:
                 pass
+        time.sleep(1 / FREQUENCY)
 
 
 def main():
