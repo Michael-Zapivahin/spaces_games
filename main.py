@@ -115,7 +115,7 @@ def draw_blink(canvas):
     canvas.border()
     while True:
         canvas.refresh()
-        for coroutine in coroutines:
+        for coroutine in coroutines.copy():
             try:
                 coroutine.send(None)
             except StopIteration or KeyboardInterrupt:
