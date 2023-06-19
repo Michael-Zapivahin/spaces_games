@@ -86,6 +86,7 @@ async def draw_ship(canvas, ship_row, ship_column, frame_1, frame_2):
 
 
 async def blink(canvas, row, column, symbol='*', delay=[]):
+
     for _ in delay:
         await asyncio.sleep(0)
 
@@ -166,7 +167,7 @@ def draw_trash(canvas):
                 coroutine.send(None)
             except StopIteration or KeyboardInterrupt:
                 coroutines.remove(coroutine)
-        time.sleep(10 / FREQUENCY)
+            time.sleep(10 / FREQUENCY)
 
 
 def main():
@@ -175,7 +176,9 @@ def main():
     curses.curs_set(0)
     curses.update_lines_cols()
     curses.A_DIM
-    curses.wrapper(draw_trash)
+    # curses.wrapper(draw_trash)
+    curses.wrapper(draw_blink)
+
 
 
 if __name__ == '__main__':
