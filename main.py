@@ -144,7 +144,8 @@ async def draw_trash(canvas, frames):
     column = COLUMN_START
 
     for garbage_frame in frames:
-        column += random.choice(range(10, 30))
+        # column += random.choice(range(10, 30))
+        column = random.choice(range(COLUMN_END))
         row = random.choice(range(ROW_END))
         coroutine_frames = fly_garbage(canvas, column, row, garbage_frame)
         coroutines.append(coroutine_frames)
@@ -157,7 +158,7 @@ async def draw_trash(canvas, frames):
                 coroutine.send(None)
             except StopIteration or KeyboardInterrupt:
                 coroutines.remove(coroutine)
-            await asyncio.sleep(10 / FREQUENCY)
+        await asyncio.sleep(20 / FREQUENCY)
 
 
 def start_game(canvas):

@@ -72,4 +72,4 @@ def update_speed(row_speed, column_speed, rows_direction, columns_direction, row
     if columns_direction != 0:
         column_speed = _apply_acceleration(column_speed, column_speed_limit, columns_direction > 0)
 
-    return row_speed, column_speed
+    return (row_speed), (column_speed)

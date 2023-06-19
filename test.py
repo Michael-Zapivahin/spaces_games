@@ -1,10 +1,11 @@
 import random
-import time
 import curses
 import asyncio
 
 from curses_tools import draw_frame
 import curses_tools
+
+from physics import update_speed
 
 
 window_size = curses.initscr().getmaxyx()
@@ -67,13 +68,15 @@ async def fire(canvas, start_row, start_column, rows_speed=-0.3, columns_speed=0
         column += columns_speed
 
 
-async def draw_ship(canvas, ship_row, ship_column, frame_1, frame_2):
+async def draw_ship(canvas, ship_row, ship_column, frame_1, frame_2, row_speed, column_speed):
     while True:
         rows_direction, columns_direction, space_pressed = curses_tools.read_controls(canvas)
-        ship_row += rows_direction
+        row_speed, column_speed = update_speed(row_speed, column_speed, rows_direction, columns_direction)
+
+        ship_row += row_speed
+        ship_column += column_speed
         ship_row = max(ship_row, ROW_START)
         ship_row = min(ship_row, ROW_END - 8)
-        ship_column += columns_direction
         ship_column = max(ship_column, COLUMN_START)
         ship_column = min(ship_column, COLUMN_END)
 
@@ -108,16 +111,12 @@ async def blink(canvas, row, column, symbol='*', delay=[]):
             await asyncio.sleep(0)
 
 
-async def draw_blink(canvas):
-
-    with open("rocket_frame_1.txt", "r") as my_file:
-        frame_1 = my_file.read()
-    with open("rocket_frame_2.txt", "r") as my_file:
-        frame_2 = my_file.read()
+async def draw_blink(canvas, frame_1, frame_2):
 
     coroutines = []
+    row_speed, column_speed = 0.5, 0.5
     ship_row, ship_column = ROW_START + 2, int(COLUMN_END / 2)
-    coroutine_frames = draw_ship(canvas, ship_row, ship_column, frame_1, frame_2)
+    coroutine_frames = draw_ship(canvas, ship_row, ship_column, frame_1, frame_2, row_speed, column_speed)
     coroutines.append(coroutine_frames)
     symbols = '+*.:'
 
@@ -143,18 +142,14 @@ async def draw_blink(canvas):
         await asyncio.sleep(1 / FREQUENCY)
 
 
-async def draw_trash(canvas):
-    draw_files = ['duck.txt', 'hubble.txt', 'lamp.txt', 'trash_large.txt', 'trash_small.txt', 'trash_xl.txt']
-    frames = []
-    for draw in draw_files:
-        with open(draw, "r") as my_file:
-            frames.append(my_file.read())
+async def draw_trash(canvas, frames):
 
     coroutines = []
     column = COLUMN_START
 
     for garbage_frame in frames:
-        column += random.choice(range(10, 30))
+        # column += random.choice(range(10, 30))
+        column = random.choice(range(COLUMN_END))
         row = random.choice(range(ROW_END))
         coroutine_frames = fly_garbage(canvas, column, row, garbage_frame)
         coroutines.append(coroutine_frames)
@@ -167,13 +162,25 @@ async def draw_trash(canvas):
                 coroutine.send(None)
             except StopIteration or KeyboardInterrupt:
                 coroutines.remove(coroutine)
-            await asyncio.sleep(10 / FREQUENCY)
+        await asyncio.sleep(20 / FREQUENCY)
 
 
 def start_game(canvas):
+
+    with open("rocket_frame_1.txt", "r") as my_file:
+        frame_1 = my_file.read()
+    with open("rocket_frame_2.txt", "r") as my_file:
+        frame_2 = my_file.read()
+
+    draw_files = ['duck.txt', 'hubble.txt', 'lamp.txt', 'trash_large.txt', 'trash_small.txt', 'trash_xl.txt']
+    frames = []
+    for draw in draw_files:
+        with open(draw, "r") as my_file:
+            frames.append(my_file.read())
+
     loop = asyncio.get_event_loop()
-    loop.create_task(draw_blink(canvas))
-    loop.create_task(draw_trash(canvas))
+    loop.create_task(draw_blink(canvas, frame_1, frame_2))
+    # loop.create_task(draw_trash(canvas, frames))
 
     loop.run_forever()
 
@@ -185,8 +192,6 @@ def main():
     curses.update_lines_cols()
     curses.A_DIM
     curses.wrapper(start_game)
-    # curses.wrapper(draw_blink)
-
 
 
 if __name__ == '__main__':
