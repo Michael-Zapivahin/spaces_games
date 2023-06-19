@@ -108,7 +108,7 @@ async def blink(canvas, row, column, symbol='*', delay=[]):
             await asyncio.sleep(0)
 
 
-def draw_blink(canvas):
+async def draw_blink(canvas):
 
     with open("rocket_frame_1.txt", "r") as my_file:
         frame_1 = my_file.read()
@@ -140,10 +140,10 @@ def draw_blink(canvas):
                 coroutine.send(None)
             except StopIteration or KeyboardInterrupt:
                 coroutines.remove(coroutine)
-        time.sleep(1 / FREQUENCY)
+        await asyncio.sleep(1 / FREQUENCY)
 
 
-def draw_trash(canvas):
+async def draw_trash(canvas):
     draw_files = ['duck.txt', 'hubble.txt', 'lamp.txt', 'trash_large.txt', 'trash_small.txt', 'trash_xl.txt']
     frames = []
     for draw in draw_files:
@@ -167,7 +167,15 @@ def draw_trash(canvas):
                 coroutine.send(None)
             except StopIteration or KeyboardInterrupt:
                 coroutines.remove(coroutine)
-            time.sleep(10 / FREQUENCY)
+            await asyncio.sleep(10 / FREQUENCY)
+
+
+def start_game(canvas):
+    loop = asyncio.get_event_loop()
+    loop.create_task(draw_blink(canvas))
+    loop.create_task(draw_trash(canvas))
+
+    loop.run_forever()
 
 
 def main():
@@ -176,8 +184,8 @@ def main():
     curses.curs_set(0)
     curses.update_lines_cols()
     curses.A_DIM
-    # curses.wrapper(draw_trash)
-    curses.wrapper(draw_blink)
+    curses.wrapper(start_game)
+    # curses.wrapper(draw_blink)
 
 
 
