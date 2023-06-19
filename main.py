@@ -1,10 +1,11 @@
 import random
-import time
 import curses
 import asyncio
 
 from curses_tools import draw_frame
 import curses_tools
+
+from physics import update_speed
 
 
 window_size = curses.initscr().getmaxyx()
@@ -67,13 +68,15 @@ async def fire(canvas, start_row, start_column, rows_speed=-0.3, columns_speed=0
         column += columns_speed
 
 
-async def draw_ship(canvas, ship_row, ship_column, frame_1, frame_2):
+async def draw_ship(canvas, ship_row, ship_column, frame_1, frame_2, row_speed, column_speed):
     while True:
         rows_direction, columns_direction, space_pressed = curses_tools.read_controls(canvas)
-        ship_row += rows_direction
+        row_speed, column_speed = update_speed(row_speed, column_speed, rows_direction, columns_direction)
+
+        ship_row += row_speed
+        ship_column += column_speed
         ship_row = max(ship_row, ROW_START)
         ship_row = min(ship_row, ROW_END - 8)
-        ship_column += columns_direction
         ship_column = max(ship_column, COLUMN_START)
         ship_column = min(ship_column, COLUMN_END)
 
@@ -111,8 +114,9 @@ async def blink(canvas, row, column, symbol='*', delay=[]):
 async def draw_blink(canvas, frame_1, frame_2):
 
     coroutines = []
+    row_speed, column_speed = 0.5, 0.5
     ship_row, ship_column = ROW_START + 2, int(COLUMN_END / 2)
-    coroutine_frames = draw_ship(canvas, ship_row, ship_column, frame_1, frame_2)
+    coroutine_frames = draw_ship(canvas, ship_row, ship_column, frame_1, frame_2, row_speed, column_speed)
     coroutines.append(coroutine_frames)
     symbols = '+*.:'
 
@@ -176,7 +180,7 @@ def start_game(canvas):
 
     loop = asyncio.get_event_loop()
     loop.create_task(draw_blink(canvas, frame_1, frame_2))
-    loop.create_task(draw_trash(canvas, frames))
+    # loop.create_task(draw_trash(canvas, frames))
 
     loop.run_forever()
 
