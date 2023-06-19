@@ -3,6 +3,7 @@ import time
 import curses
 import asyncio
 
+from curses_tools import draw_frame
 import curses_tools
 
 
@@ -17,6 +18,24 @@ FREQUENCY = 100
 STARS_FLASH_FREQUENCY = 3
 STARS_COUNT = 50
 TIC_TIMEOUT = 10
+
+
+async def fly_garbage(canvas, column, row, garbage_frame, speed=0.5):
+    """Animate garbage, flying from top to bottom. Сolumn position will stay same, as specified on start."""
+    rows_number, columns_number = canvas.getmaxyx()
+
+    column = max(column, 0)
+    column = min(column, columns_number - 1)
+
+    # row = 0
+
+    while row < rows_number:
+        draw_frame(canvas, row, column, garbage_frame)
+        await asyncio.sleep(0)
+        draw_frame(canvas, row, column, garbage_frame, negative=True)
+        row += speed
+        if row >= rows_number:
+            row = ROW_START
 
 
 async def fire(canvas, start_row, start_column, rows_speed=-0.3, columns_speed=0):
@@ -48,7 +67,7 @@ async def fire(canvas, start_row, start_column, rows_speed=-0.3, columns_speed=0
         column += columns_speed
 
 
-async def draw_frame(canvas, ship_row, ship_column, frame_1, frame_2):
+async def draw_ship(canvas, ship_row, ship_column, frame_1, frame_2):
     while True:
         rows_direction, columns_direction, space_pressed = curses_tools.read_controls(canvas)
         ship_row += rows_direction
@@ -58,12 +77,12 @@ async def draw_frame(canvas, ship_row, ship_column, frame_1, frame_2):
         ship_column = max(ship_column, COLUMN_START)
         ship_column = min(ship_column, COLUMN_END)
 
-        curses_tools.draw_frame(canvas, ship_row, ship_column, frame_1)
+        draw_frame(canvas, ship_row, ship_column, frame_1)
         await asyncio.sleep(0)
-        curses_tools.draw_frame(canvas, ship_row, ship_column, frame_1, True)
-        curses_tools.draw_frame(canvas, ship_row, ship_column, frame_2)
+        draw_frame(canvas, ship_row, ship_column, frame_1, True)
+        draw_frame(canvas, ship_row, ship_column, frame_2)
         await asyncio.sleep(0)
-        curses_tools.draw_frame(canvas, ship_row, ship_column, frame_2, True)
+        draw_frame(canvas, ship_row, ship_column, frame_2, True)
 
 
 async def blink(canvas, row, column, symbol='*', delay=[]):
@@ -97,7 +116,7 @@ def draw_blink(canvas):
 
     coroutines = []
     ship_row, ship_column = ROW_START + 2, int(COLUMN_END / 2)
-    coroutine_frames = draw_frame(canvas, ship_row, ship_column, frame_1, frame_2)
+    coroutine_frames = draw_ship(canvas, ship_row, ship_column, frame_1, frame_2)
     coroutines.append(coroutine_frames)
     symbols = '+*.:'
 
@@ -123,13 +142,40 @@ def draw_blink(canvas):
         time.sleep(1 / FREQUENCY)
 
 
+def draw_trash(canvas):
+    draw_files = ['duck.txt', 'hubble.txt', 'lamp.txt', 'trash_large.txt', 'trash_small.txt', 'trash_xl.txt']
+    frames = []
+    for draw in draw_files:
+        with open(draw, "r") as my_file:
+            frames.append(my_file.read())
+
+    coroutines = []
+    column = COLUMN_START
+
+    for garbage_frame in frames:
+        column += random.choice(range(10, 30))
+        row = random.choice(range(ROW_END))
+        coroutine_frames = fly_garbage(canvas, column, row, garbage_frame)
+        coroutines.append(coroutine_frames)
+
+    canvas.border()
+    while True:
+        canvas.refresh()
+        for coroutine in coroutines.copy():
+            try:
+                coroutine.send(None)
+            except StopIteration or KeyboardInterrupt:
+                coroutines.remove(coroutine)
+        time.sleep(10 / FREQUENCY)
+
+
 def main():
     window = curses.initscr()
     window.nodelay(True)
     curses.curs_set(0)
     curses.update_lines_cols()
     curses.A_DIM
-    curses.wrapper(draw_blink)
+    curses.wrapper(draw_trash)
 
 
 if __name__ == '__main__':
