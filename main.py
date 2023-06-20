@@ -6,6 +6,7 @@ from curses_tools import draw_frame
 import curses_tools
 
 from physics import update_speed
+from obstacles import Obstacle
 
 
 window_size = curses.initscr().getmaxyx()
@@ -21,6 +22,7 @@ STARS_COUNT = 50
 TIC_TIMEOUT = 10
 
 coroutines = []
+obstacles = []
 
 
 async def fly_garbage(canvas, column, row, garbage_frame, speed=0.5):
@@ -29,8 +31,6 @@ async def fly_garbage(canvas, column, row, garbage_frame, speed=0.5):
 
     column = max(column, 0)
     column = min(column, columns_number - 1)
-
-    # row = 0
 
     while row < rows_number:
         draw_frame(canvas, row, column, garbage_frame)
@@ -146,24 +146,22 @@ async def draw_blink(canvas, frame_1, frame_2):
 
 async def draw_trash(canvas, frames):
 
-    coroutines = []
-    column = COLUMN_START
+    trash_coroutines = []
 
-    for garbage_frame in frames:
-        column += random.choice(range(10, 30))
-        # column = random.choice(range(COLUMN_END))
+    for index in range(8):
+        column = random.choice(range(COLUMN_END))
         row = random.choice(range(ROW_END))
-        coroutine_frames = fly_garbage(canvas, column, row, garbage_frame)
-        coroutines.append(coroutine_frames)
+        obstacles.append(Obstacle(row, column, 4, 4, index))
+        trash_coroutines.append(fly_garbage(canvas, column, row, random.choice(frames)))
 
     canvas.border()
     while True:
         canvas.refresh()
-        for coroutine in coroutines.copy():
+        for trash_coroutine in trash_coroutines.copy():
             try:
-                coroutine.send(None)
+                trash_coroutine.send(None)
             except StopIteration or KeyboardInterrupt:
-                coroutines.remove(coroutine)
+                coroutines.remove(trash_coroutine)
         await asyncio.sleep(20 / FREQUENCY)
 
 
@@ -174,16 +172,16 @@ def start_game(canvas):
     with open("rocket_frame_2.txt", "r") as my_file:
         frame_2 = my_file.read()
 
-    draw_files = ['duck.txt', 'hubble.txt', 'lamp.txt', 'trash_large.txt', 'trash_small.txt', 'trash_xl.txt']
-    frames = []
-    for draw in draw_files:
-        with open(draw, "r") as my_file:
-            frames.append(my_file.read())
+    trash_files = ['duck.txt', 'hubble.txt', 'lamp.txt', 'trash_large.txt', 'trash_small.txt', 'trash_xl.txt']
+    trash_frames = []
+
+    for trash in trash_files:
+        with open(trash, "r") as my_file:
+            trash_frames.append(my_file.read())
 
     loop = asyncio.get_event_loop()
     loop.create_task(draw_blink(canvas, frame_1, frame_2))
-    loop.create_task(draw_trash(canvas, frames))
-
+    loop.create_task(draw_trash(canvas, trash_frames))
     loop.run_forever()
 
 
