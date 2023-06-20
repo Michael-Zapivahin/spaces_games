@@ -9,14 +9,18 @@ from curses_tools import (
     get_frame_size,
 )
 
-from curses_tools import draw_frame
-import curses_tools
-
 from physics import update_speed
-from obstacles import Obstacle, show_obstacles
+from obstacles import Obstacle
+from explosion import explode
 
 
 window_size = curses.initscr().getmaxyx()
+
+game_over_phrase = """ / ____|                       / __ \                
+ | |  __  __ _ _ __ ___   ___  | |  | |_   _____ _ __ 
+ | | |_ |/ _` | '_ ` _ \ / _ \ | |  | \ \ / / _ \ '__|
+ | |__| | (_| | | | | | |  __/ | |__| |\ V /  __/ |   
+  \_____|\__,_|_| |_| |_|\___|  \____/  \_/ \___|_|"""
 
 COLUMN_START = 1
 COLUMN_END = window_size[1]-6
@@ -32,6 +36,14 @@ TIC_TIMEOUT = 10
 coroutines = []
 obstacles = []
 obstacles_in_last_collision = []
+
+
+async def show_game_over(canvas):
+    canvas_height, canvas_width = canvas.getmaxyx()
+    center_row, center_column = (canvas_height // 4, (canvas_width // 4) - 20)
+    while True:
+        draw_frame(canvas, center_row, center_column, game_over_phrase)
+        await asyncio.sleep(0)
 
 
 async def sleep(tics=1):
@@ -75,6 +87,7 @@ async def fly_garbage(canvas, column, garbage_frame, speed=0.5):
         if obstacle in obstacles_in_last_collision:
             obstacles.remove(obstacle)
             obstacles_in_last_collision.remove(obstacle)
+            await explode(canvas, row, column)
             return
         draw_frame(canvas, row, column, garbage_frame)
         for index in range(10):
@@ -124,7 +137,8 @@ async def fire(canvas, start_row, start_column, rows_speed=-0.3, columns_speed=0
 
 async def draw_ship(canvas, ship_row, ship_column, frame_1, frame_2, row_speed, column_speed):
     while True:
-        rows_direction, columns_direction, space_pressed = curses_tools.read_controls(canvas)
+        frame_height, frame_width = get_frame_size(frame_1)
+        rows_direction, columns_direction, space_pressed = read_controls(canvas)
         row_speed, column_speed = update_speed(row_speed, column_speed, rows_direction, columns_direction)
 
         if space_pressed:
@@ -143,6 +157,12 @@ async def draw_ship(canvas, ship_row, ship_column, frame_1, frame_2, row_speed, 
         draw_frame(canvas, ship_row, ship_column, frame_2)
         await asyncio.sleep(0)
         draw_frame(canvas, ship_row, ship_column, frame_2, True)
+
+        for obstacle in obstacles:
+            if obstacle.has_collision(ship_row, ship_column, frame_height, frame_width):
+                obstacles_in_last_collision.append(obstacle)
+                await show_game_over(canvas)
+                return
 
 
 async def blink(canvas, row, column, symbol='*', delay=[]):
