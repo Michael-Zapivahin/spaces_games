@@ -20,6 +20,8 @@ STARS_FLASH_FREQUENCY = 3
 STARS_COUNT = 50
 TIC_TIMEOUT = 10
 
+coroutines = []
+
 
 async def fly_garbage(canvas, column, row, garbage_frame, speed=0.5):
     """Animate garbage, flying from top to bottom. Сolumn position will stay same, as specified on start."""
@@ -73,6 +75,9 @@ async def draw_ship(canvas, ship_row, ship_column, frame_1, frame_2, row_speed, 
         rows_direction, columns_direction, space_pressed = curses_tools.read_controls(canvas)
         row_speed, column_speed = update_speed(row_speed, column_speed, rows_direction, columns_direction)
 
+        if space_pressed:
+            coroutines.append(fire(canvas, ship_row, ship_column+2, -0.1))
+
         ship_row += row_speed
         ship_column += column_speed
         ship_row = max(ship_row, ROW_START)
@@ -113,14 +118,11 @@ async def blink(canvas, row, column, symbol='*', delay=[]):
 
 async def draw_blink(canvas, frame_1, frame_2):
 
-    coroutines = []
     row_speed, column_speed = 0.5, 0.5
     ship_row, ship_column = ROW_START + 2, int(COLUMN_END / 2)
     coroutine_frames = draw_ship(canvas, ship_row, ship_column, frame_1, frame_2, row_speed, column_speed)
     coroutines.append(coroutine_frames)
     symbols = '+*.:'
-
-    coroutines.append(fire(canvas, ROW_END, COLUMN_START, -0.1, 2))
 
     for _ in range(STARS_COUNT):
         coroutines.append(blink(
@@ -148,8 +150,8 @@ async def draw_trash(canvas, frames):
     column = COLUMN_START
 
     for garbage_frame in frames:
-        # column += random.choice(range(10, 30))
-        column = random.choice(range(COLUMN_END))
+        column += random.choice(range(10, 30))
+        # column = random.choice(range(COLUMN_END))
         row = random.choice(range(ROW_END))
         coroutine_frames = fly_garbage(canvas, column, row, garbage_frame)
         coroutines.append(coroutine_frames)
@@ -180,7 +182,7 @@ def start_game(canvas):
 
     loop = asyncio.get_event_loop()
     loop.create_task(draw_blink(canvas, frame_1, frame_2))
-    # loop.create_task(draw_trash(canvas, frames))
+    loop.create_task(draw_trash(canvas, frames))
 
     loop.run_forever()
 
