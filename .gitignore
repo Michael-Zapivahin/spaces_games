@@ -160,3 +160,4 @@ cython_debug/
 .idea/inspectionProfiles/Project_Default.xml
 .idea/misc.xml
 .idea/spaces_games.iml
+main_2.py

@@ -1,12 +1,19 @@
 import random
 import curses
 import asyncio
+import time
+
+from curses_tools import (
+    draw_frame,
+    read_controls,
+    get_frame_size,
+)
 
 from curses_tools import draw_frame
 import curses_tools
 
 from physics import update_speed
-from obstacles import Obstacle
+from obstacles import Obstacle, show_obstacles
 
 
 window_size = curses.initscr().getmaxyx()
@@ -15,8 +22,9 @@ COLUMN_START = 1
 COLUMN_END = window_size[1]-6
 ROW_START = 1
 ROW_END = window_size[0]-2
+BORDER_OFFSET = 1
 
-FREQUENCY = 100
+FREQUENCY = 50
 STARS_FLASH_FREQUENCY = 3
 STARS_COUNT = 50
 TIC_TIMEOUT = 10
@@ -25,20 +33,56 @@ coroutines = []
 obstacles = []
 
 
-async def fly_garbage(canvas, column, row, garbage_frame, speed=0.5):
+async def sleep(tics=1):
+    for _ in range(tics):
+        await asyncio.sleep(0)
+
+
+async def fill_orbit_with_garbage(canvas, garbage_frames):
+    # global year
+
+    canvas_height, canvas_width = canvas.getmaxyx()
+    while True:
+        garbage_delay = 20
+        for index in range(10):
+            await asyncio.sleep(0)
+        if not garbage_delay:
+            continue
+
+        random_frame = random.choice(garbage_frames)
+        _, frame_width = get_frame_size(random_frame)
+        random_column = random.randint(1, canvas_width - frame_width - BORDER_OFFSET)
+        coroutines.append(fly_garbage(canvas, random_column, random_frame))
+
+        await asyncio.sleep(0)
+
+
+async def fly_garbage(canvas, column, garbage_frame, speed=0.5):
     """Animate garbage, flying from top to bottom. Сolumn position will stay same, as specified on start."""
     rows_number, columns_number = canvas.getmaxyx()
 
     column = max(column, 0)
     column = min(column, columns_number - 1)
 
+    row = 0
+
+    frame_height, frame_width = get_frame_size(garbage_frame)
+    obstacle = Obstacle(row, column, frame_height, frame_width)
+    obstacles.append(obstacle)
+
+    obstacle_frame = obstacle.get_bounding_box_frame()
+
     while row < rows_number:
         draw_frame(canvas, row, column, garbage_frame)
-        await asyncio.sleep(0)
+        draw_frame(canvas, row, column, obstacle_frame)
+        for index in range(10):
+            await asyncio.sleep(0)
         draw_frame(canvas, row, column, garbage_frame, negative=True)
+        draw_frame(canvas, row, column, obstacle_frame, negative=True)
         row += speed
-        if row >= rows_number:
-            row = ROW_START
+        obstacle.row += speed
+
+    obstacles.remove(obstacle)
 
 
 async def fire(canvas, start_row, start_column, rows_speed=-0.3, columns_speed=0):
@@ -47,11 +91,13 @@ async def fire(canvas, start_row, start_column, rows_speed=-0.3, columns_speed=0
     row, column = start_row, start_column
 
     canvas.addstr(round(row), round(column), '*')
-    await asyncio.sleep(0)
+    await sleep(3)
 
     canvas.addstr(round(row), round(column), 'O')
-    await asyncio.sleep(0)
+    await sleep(3)
+
     canvas.addstr(round(row), round(column), ' ')
+    await sleep(3)
 
     row += rows_speed
     column += columns_speed
@@ -101,22 +147,34 @@ async def blink(canvas, row, column, symbol='*', delay=[]):
     while True:
         canvas.addstr(row, column, symbol, curses.A_DIM)
         for _ in range(TIC_TIMEOUT * 20):
-            await asyncio.sleep(0)
+            await sleep(1)
 
         canvas.addstr(row, column, symbol)
         for _ in range(TIC_TIMEOUT * 3):
-            await asyncio.sleep(0)
+            await sleep(1)
 
         canvas.addstr(row, column, symbol, curses.A_BOLD)
         for _ in range(TIC_TIMEOUT * 5):
-            await asyncio.sleep(0)
+            await sleep(1)
 
         canvas.addstr(row, column, symbol)
         for _ in range(TIC_TIMEOUT * 3):
-            await asyncio.sleep(0)
+            await sleep(1)
 
 
-async def draw_blink(canvas, frame_1, frame_2):
+def draw(canvas):
+
+    with open("rocket_frame_1.txt", "r") as my_file:
+        frame_1 = my_file.read()
+    with open("rocket_frame_2.txt", "r") as my_file:
+        frame_2 = my_file.read()
+
+    trash_files = ['duck.txt', 'hubble.txt', 'lamp.txt', 'trash_large.txt', 'trash_small.txt', 'trash_xl.txt']
+    trash_frames = []
+
+    for trash in trash_files:
+        with open(trash, "r") as my_file:
+            trash_frames.append(my_file.read())
 
     row_speed, column_speed = 0.5, 0.5
     ship_row, ship_column = ROW_START + 2, int(COLUMN_END / 2)
@@ -133,6 +191,8 @@ async def draw_blink(canvas, frame_1, frame_2):
             range(random.randint(1, STARS_FLASH_FREQUENCY))
         ))
 
+    coroutines.append(fill_orbit_with_garbage(canvas, trash_frames))
+
     canvas.border()
     while True:
         canvas.refresh()
@@ -141,7 +201,7 @@ async def draw_blink(canvas, frame_1, frame_2):
                 coroutine.send(None)
             except StopIteration or KeyboardInterrupt:
                 coroutines.remove(coroutine)
-        await asyncio.sleep(1 / FREQUENCY)
+        time.sleep(1 / FREQUENCY)
 
 
 async def draw_trash(canvas, frames):
@@ -179,10 +239,7 @@ def start_game(canvas):
         with open(trash, "r") as my_file:
             trash_frames.append(my_file.read())
 
-    loop = asyncio.get_event_loop()
-    loop.create_task(draw_blink(canvas, frame_1, frame_2))
-    loop.create_task(draw_trash(canvas, trash_frames))
-    loop.run_forever()
+
 
 
 def main():
@@ -191,7 +248,7 @@ def main():
     curses.curs_set(0)
     curses.update_lines_cols()
     curses.A_DIM
-    curses.wrapper(start_game)
+    curses.wrapper(draw)
 
 
 if __name__ == '__main__':

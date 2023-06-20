@@ -1,197 +1,20 @@
-import random
-import curses
-import asyncio
-
-from curses_tools import draw_frame
-import curses_tools
-
-from physics import update_speed
 
 
-window_size = curses.initscr().getmaxyx()
-
-COLUMN_START = 1
-COLUMN_END = window_size[1]-6
-ROW_START = 1
-ROW_END = window_size[0]-2
-
-FREQUENCY = 100
-STARS_FLASH_FREQUENCY = 3
-STARS_COUNT = 50
-TIC_TIMEOUT = 10
+import curses_tools as tools
 
 
-async def fly_garbage(canvas, column, row, garbage_frame, speed=0.5):
-    """Animate garbage, flying from top to bottom. Сolumn position will stay same, as specified on start."""
-    rows_number, columns_number = canvas.getmaxyx()
 
-    column = max(column, 0)
-    column = min(column, columns_number - 1)
-
-    # row = 0
-
-    while row < rows_number:
-        draw_frame(canvas, row, column, garbage_frame)
-        await asyncio.sleep(0)
-        draw_frame(canvas, row, column, garbage_frame, negative=True)
-        row += speed
-        if row >= rows_number:
-            row = ROW_START
-
-
-async def fire(canvas, start_row, start_column, rows_speed=-0.3, columns_speed=0):
-    """Display animation of gun shot, direction and speed can be specified."""
-
-    row, column = start_row, start_column
-
-    canvas.addstr(round(row), round(column), '*')
-    await asyncio.sleep(0)
-
-    canvas.addstr(round(row), round(column), 'O')
-    await asyncio.sleep(0)
-    canvas.addstr(round(row), round(column), ' ')
-
-    row += rows_speed
-    column += columns_speed
-
-    symbol = '-' if columns_speed else '|'
-
-    rows, columns = canvas.getmaxyx()
-    max_row, max_column = rows - 1, columns - 1
-
-    curses.beep()
-    while 0 < row < max_row and 0 < column < max_column:
-        canvas.addstr(round(row), round(column), symbol)
-        await asyncio.sleep(0)
-        canvas.addstr(round(row), round(column), ' ')
-        row += rows_speed
-        column += columns_speed
-
-
-async def draw_ship(canvas, ship_row, ship_column, frame_1, frame_2, row_speed, column_speed):
-    while True:
-        rows_direction, columns_direction, space_pressed = curses_tools.read_controls(canvas)
-        row_speed, column_speed = update_speed(row_speed, column_speed, rows_direction, columns_direction)
-
-        ship_row += row_speed
-        ship_column += column_speed
-        ship_row = max(ship_row, ROW_START)
-        ship_row = min(ship_row, ROW_END - 8)
-        ship_column = max(ship_column, COLUMN_START)
-        ship_column = min(ship_column, COLUMN_END)
-
-        draw_frame(canvas, ship_row, ship_column, frame_1)
-        await asyncio.sleep(0)
-        draw_frame(canvas, ship_row, ship_column, frame_1, True)
-        draw_frame(canvas, ship_row, ship_column, frame_2)
-        await asyncio.sleep(0)
-        draw_frame(canvas, ship_row, ship_column, frame_2, True)
-
-
-async def blink(canvas, row, column, symbol='*', delay=[]):
-
-    for _ in delay:
-        await asyncio.sleep(0)
-
-    while True:
-        canvas.addstr(row, column, symbol, curses.A_DIM)
-        for _ in range(TIC_TIMEOUT * 20):
-            await asyncio.sleep(0)
-
-        canvas.addstr(row, column, symbol)
-        for _ in range(TIC_TIMEOUT * 3):
-            await asyncio.sleep(0)
-
-        canvas.addstr(row, column, symbol, curses.A_BOLD)
-        for _ in range(TIC_TIMEOUT * 5):
-            await asyncio.sleep(0)
-
-        canvas.addstr(row, column, symbol)
-        for _ in range(TIC_TIMEOUT * 3):
-            await asyncio.sleep(0)
-
-
-async def draw_blink(canvas, frame_1, frame_2):
-
-    coroutines = []
-    row_speed, column_speed = 0.5, 0.5
-    ship_row, ship_column = ROW_START + 2, int(COLUMN_END / 2)
-    coroutine_frames = draw_ship(canvas, ship_row, ship_column, frame_1, frame_2, row_speed, column_speed)
-    coroutines.append(coroutine_frames)
-    symbols = '+*.:'
-
-    coroutines.append(fire(canvas, ROW_END, COLUMN_START, -0.1, 2))
-
-    for _ in range(STARS_COUNT):
-        coroutines.append(blink(
-            canvas,
-            random.randint(ROW_START, ROW_END),
-            random.randint(COLUMN_START, COLUMN_END),
-            random.choice(symbols),
-            range(random.randint(1, STARS_FLASH_FREQUENCY))
-        ))
-
-    canvas.border()
-    while True:
-        canvas.refresh()
-        for coroutine in coroutines.copy():
-            try:
-                coroutine.send(None)
-            except StopIteration or KeyboardInterrupt:
-                coroutines.remove(coroutine)
-        await asyncio.sleep(1 / FREQUENCY)
-
-
-async def draw_trash(canvas, frames):
-
-    coroutines = []
-    column = COLUMN_START
-
-    for garbage_frame in frames:
-        # column += random.choice(range(10, 30))
-        column = random.choice(range(COLUMN_END))
-        row = random.choice(range(ROW_END))
-        coroutine_frames = fly_garbage(canvas, column, row, garbage_frame)
-        coroutines.append(coroutine_frames)
-
-    canvas.border()
-    while True:
-        canvas.refresh()
-        for coroutine in coroutines.copy():
-            try:
-                coroutine.send(None)
-            except StopIteration or KeyboardInterrupt:
-                coroutines.remove(coroutine)
-        await asyncio.sleep(20 / FREQUENCY)
-
-
-def start_game(canvas):
-
-    with open("rocket_frame_1.txt", "r") as my_file:
-        frame_1 = my_file.read()
-    with open("rocket_frame_2.txt", "r") as my_file:
-        frame_2 = my_file.read()
-
-    draw_files = ['duck.txt', 'hubble.txt', 'lamp.txt', 'trash_large.txt', 'trash_small.txt', 'trash_xl.txt']
-    frames = []
-    for draw in draw_files:
-        with open(draw, "r") as my_file:
-            frames.append(my_file.read())
-
-    loop = asyncio.get_event_loop()
-    loop.create_task(draw_blink(canvas, frame_1, frame_2))
-    # loop.create_task(draw_trash(canvas, frames))
-
-    loop.run_forever()
 
 
 def main():
-    window = curses.initscr()
-    window.nodelay(True)
-    curses.curs_set(0)
-    curses.update_lines_cols()
-    curses.A_DIM
-    curses.wrapper(start_game)
+    trash_files = ['duck.txt', 'hubble.txt', 'lamp.txt', 'trash_large.txt', 'trash_small.txt', 'trash_xl.txt']
+    trash_frames = []
+    for trash in trash_files:
+        with open(trash, "r") as my_file:
+            trash_frames.append(my_file.read())
+    for trash in trash_frames:
+        frame_height, frame_width = tools.get_frame_size(trash)
+        print(frame_height, frame_width)
 
 
 if __name__ == '__main__':
