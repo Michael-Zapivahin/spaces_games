@@ -31,6 +31,7 @@ TIC_TIMEOUT = 10
 
 coroutines = []
 obstacles = []
+obstacles_in_last_collision = []
 
 
 async def sleep(tics=1):
@@ -70,15 +71,15 @@ async def fly_garbage(canvas, column, garbage_frame, speed=0.5):
     obstacle = Obstacle(row, column, frame_height, frame_width)
     obstacles.append(obstacle)
 
-    obstacle_frame = obstacle.get_bounding_box_frame()
-
     while row < rows_number:
+        if obstacle in obstacles_in_last_collision:
+            obstacles.remove(obstacle)
+            obstacles_in_last_collision.remove(obstacle)
+            return
         draw_frame(canvas, row, column, garbage_frame)
-        draw_frame(canvas, row, column, obstacle_frame)
         for index in range(10):
             await asyncio.sleep(0)
         draw_frame(canvas, row, column, garbage_frame, negative=True)
-        draw_frame(canvas, row, column, obstacle_frame, negative=True)
         row += speed
         obstacle.row += speed
 
@@ -114,6 +115,11 @@ async def fire(canvas, start_row, start_column, rows_speed=-0.3, columns_speed=0
         canvas.addstr(round(row), round(column), ' ')
         row += rows_speed
         column += columns_speed
+
+        for obstacle in obstacles:
+            if obstacle.has_collision(row, column):
+                obstacles_in_last_collision.append(obstacle)
+                return
 
 
 async def draw_ship(canvas, ship_row, ship_column, frame_1, frame_2, row_speed, column_speed):
