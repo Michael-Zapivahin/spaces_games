@@ -159,12 +159,13 @@ async def fire(canvas, start_row, start_column, rows_speed=-0.3, columns_speed=0
 
 
 async def draw_ship(canvas, ship_row, ship_column, frame_1, frame_2, row_speed, column_speed):
+    global year
     while True:
         frame_height, frame_width = get_frame_size(frame_1)
         rows_direction, columns_direction, space_pressed = read_controls(canvas)
         row_speed, column_speed = update_speed(row_speed, column_speed, rows_direction, columns_direction)
 
-        if space_pressed:
+        if space_pressed and year > 2020:
             coroutines.append(fire(canvas, ship_row, ship_column+2, -0.1))
 
         ship_row += row_speed
