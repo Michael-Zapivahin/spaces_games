@@ -7,14 +7,8 @@ The program demonstrates the process of asynchronous Python
 Python3 should already be installed. 
 Use pip or pip3, if there is a conflict with Python2) to install dependencies:
 
-```
-pip install -r requirements.txt
-```
 
-
-## How to run scripts
-
-#### Download a image of the day: 
+## How to run the game
 
 ```
 python main.py
