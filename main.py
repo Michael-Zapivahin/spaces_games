@@ -12,15 +12,18 @@ from curses_tools import (
 from physics import update_speed
 from obstacles import Obstacle
 from explosion import explode
+from game_scenario import get_garbage_delay_tics
 
 
 window_size = curses.initscr().getmaxyx()
 
-game_over_phrase = """ / ____|                       / __ \                
+game_over_phrase = """
+ / ____|                       / __ \                
  | |  __  __ _ _ __ ___   ___  | |  | |_   _____ _ __ 
  | | |_ |/ _` | '_ ` _ \ / _ \ | |  | \ \ / / _ \ '__|
  | |__| | (_| | | | | | |  __/ | |__| |\ V /  __/ |   
-  \_____|\__,_|_| |_| |_|\___|  \____/  \_/ \___|_|"""
+  \_____|\__,_|_| |_| |_|\___|  \____/  \_/ \___|_|
+  """
 
 COLUMN_START = 1
 COLUMN_END = window_size[1]-6
@@ -28,6 +31,7 @@ ROW_START = 1
 ROW_END = window_size[0]-2
 BORDER_OFFSET = 1
 
+year = 1957
 FREQUENCY = 50
 STARS_FLASH_FREQUENCY = 3
 STARS_COUNT = 50
@@ -36,6 +40,25 @@ TIC_TIMEOUT = 10
 coroutines = []
 obstacles = []
 obstacles_in_last_collision = []
+
+
+async def display_current_year(canvas):
+    global year
+
+    while True:
+        draw_frame(canvas, 0, 0, f'Year - {year}')
+        await asyncio.sleep(0)
+        draw_frame(canvas, 0, 0, f'Year - {year}', negative=True)
+        await asyncio.sleep(0)
+
+
+async def count_years():
+    global year
+
+    while True:
+        year += 1
+        for index in range(FREQUENCY):
+            await asyncio.sleep(0)
 
 
 async def show_game_over(canvas):
@@ -52,12 +75,12 @@ async def sleep(tics=1):
 
 
 async def fill_orbit_with_garbage(canvas, garbage_frames):
-    # global year
+    global year
 
     canvas_height, canvas_width = canvas.getmaxyx()
     while True:
-        garbage_delay = 20
-        for index in range(10):
+        garbage_delay = get_garbage_delay_tics(year) * 10
+        for index in range(garbage_delay):
             await asyncio.sleep(0)
         if not garbage_delay:
             continue
@@ -218,6 +241,8 @@ def draw(canvas):
         ))
 
     coroutines.append(fill_orbit_with_garbage(canvas, trash_frames))
+    coroutines.append(count_years())
+    coroutines.append(display_current_year(canvas))
 
     canvas.border()
     while True:
@@ -228,44 +253,6 @@ def draw(canvas):
             except StopIteration or KeyboardInterrupt:
                 coroutines.remove(coroutine)
         time.sleep(1 / FREQUENCY)
-
-
-async def draw_trash(canvas, frames):
-
-    trash_coroutines = []
-
-    for index in range(8):
-        column = random.choice(range(COLUMN_END))
-        row = random.choice(range(ROW_END))
-        obstacles.append(Obstacle(row, column, 4, 4, index))
-        trash_coroutines.append(fly_garbage(canvas, column, row, random.choice(frames)))
-
-    canvas.border()
-    while True:
-        canvas.refresh()
-        for trash_coroutine in trash_coroutines.copy():
-            try:
-                trash_coroutine.send(None)
-            except StopIteration or KeyboardInterrupt:
-                coroutines.remove(trash_coroutine)
-        await asyncio.sleep(20 / FREQUENCY)
-
-
-def start_game(canvas):
-
-    with open("rocket_frame_1.txt", "r") as my_file:
-        frame_1 = my_file.read()
-    with open("rocket_frame_2.txt", "r") as my_file:
-        frame_2 = my_file.read()
-
-    trash_files = ['duck.txt', 'hubble.txt', 'lamp.txt', 'trash_large.txt', 'trash_small.txt', 'trash_xl.txt']
-    trash_frames = []
-
-    for trash in trash_files:
-        with open(trash, "r") as my_file:
-            trash_frames.append(my_file.read())
-
-
 
 
 def main():
