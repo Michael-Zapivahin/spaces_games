@@ -2,6 +2,7 @@ import random
 import curses
 import asyncio
 import time
+import os
 
 from curses_tools import (
     draw_frame,
@@ -214,16 +215,15 @@ async def blink(canvas, row, column, symbol='*', delay=[]):
 
 def draw(canvas):
 
-    with open("rocket_frame_1.txt", "r") as my_file:
+    with open("ship_s_frames/rocket_frame_1.txt", "r") as my_file:
         frame_1 = my_file.read()
-    with open("rocket_frame_2.txt", "r") as my_file:
+    with open("ship_s_frames/rocket_frame_2.txt", "r") as my_file:
         frame_2 = my_file.read()
 
-    trash_files = ['duck.txt', 'hubble.txt', 'lamp.txt', 'trash_large.txt', 'trash_small.txt', 'trash_xl.txt']
     trash_frames = []
-
-    for trash in trash_files:
-        with open(trash, "r") as my_file:
+    path = os.path.join(os.getcwd(), 'trash_s_frames')
+    for filename in os.listdir(path):
+        with open(os.path.join(path, filename), "r") as my_file:
             trash_frames.append(my_file.read())
 
     row_speed, column_speed = 0.5, 0.5
