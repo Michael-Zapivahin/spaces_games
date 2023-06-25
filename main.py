@@ -58,8 +58,7 @@ async def count_years():
 
     while True:
         year += 1
-        for index in range(FREQUENCY):
-            await asyncio.sleep(0)
+        await sleep(FREQUENCY)
 
 
 async def show_game_over(canvas):
@@ -81,8 +80,7 @@ async def fill_orbit_with_garbage(canvas, garbage_frames):
     canvas_height, canvas_width = canvas.getmaxyx()
     while True:
         garbage_delay = get_garbage_delay_tics(year) * 10
-        for index in range(garbage_delay):
-            await asyncio.sleep(0)
+        await sleep(garbage_delay)
         if not garbage_delay:
             continue
 
@@ -190,27 +188,22 @@ async def draw_ship(canvas, ship_row, ship_column, frame_1, frame_2, row_speed, 
                 return
 
 
-async def blink(canvas, row, column, symbol='*', delay=[]):
+async def blink(canvas, row, column, symbol='*', delay=1):
 
-    for _ in delay:
-        await asyncio.sleep(0)
+    await sleep(delay)
 
     while True:
         canvas.addstr(row, column, symbol, curses.A_DIM)
-        for _ in range(TIC_TIMEOUT * 20):
-            await sleep(1)
+        await sleep(TIC_TIMEOUT * 20)
 
         canvas.addstr(row, column, symbol)
-        for _ in range(TIC_TIMEOUT * 3):
-            await sleep(1)
+        await sleep(TIC_TIMEOUT * 3)
 
         canvas.addstr(row, column, symbol, curses.A_BOLD)
-        for _ in range(TIC_TIMEOUT * 5):
-            await sleep(1)
+        await sleep(TIC_TIMEOUT * 5)
 
         canvas.addstr(row, column, symbol)
-        for _ in range(TIC_TIMEOUT * 3):
-            await sleep(1)
+        await sleep(TIC_TIMEOUT * 3)
 
 
 def draw(canvas):
@@ -238,7 +231,7 @@ def draw(canvas):
             random.randint(ROW_START, ROW_END),
             random.randint(COLUMN_START, COLUMN_END),
             random.choice(symbols),
-            range(random.randint(1, STARS_FLASH_FREQUENCY))
+            random.randint(1, STARS_FLASH_FREQUENCY)
         ))
 
     coroutines.append(fill_orbit_with_garbage(canvas, trash_frames))
